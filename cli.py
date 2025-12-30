@@ -171,6 +171,9 @@ Examples:
         print("Paper Categorization System - Setup")
         print("="*60)
 
+        # Step 1: Ensure Inbox folder exists
+        self._ensure_inbox_setup()
+
         # Case 1: categories.json already exists
         if config.paths.categories_file.exists():
             print(f"\ncategories.json already exists at {config.paths.categories_file}")
@@ -677,6 +680,17 @@ Respond in JSON:
         print("  3. Edit categories.json to add new categories")
         print("  4. Increase threshold in categories.json")
         print("="*60 + "\n")
+
+    def _ensure_inbox_setup(self) -> None:
+        """Ensure Inbox folder exists, create if not."""
+        inbox_path = config.paths.inbox
+
+        if inbox_path.exists():
+            print(f"\n[OK] Inbox folder: {inbox_path}")
+        else:
+            inbox_path.mkdir(parents=True, exist_ok=True)
+            print(f"\n[OK] Created Inbox folder: {inbox_path}")
+            print("     Place your PDFs here, then run: python -m paper_categorizer --batch")
 
 
 def main():
