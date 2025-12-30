@@ -1,0 +1,12 @@
+# Paper Categorizer Dependencies
+
+# Required
+python-dotenv>=1.0.0
+
+# AI Providers (install at least one)
+google-generativeai>=0.5.0  # For Gemini
+# anthropic>=0.18.0          # For Claude
+# openai>=1.12.0             # For OpenAI
+
+# PDF Support (optional but recommended)
+PyPDF2>=3.0.0

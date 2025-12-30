@@ -1,0 +1,39 @@
+{
+  "version": "2.0",
+  "last_updated": "",
+  "uncategorized_threshold": 20,
+  "categories": {
+    "1": {
+      "name": "1. Machine Learning",
+      "description": "General machine learning and deep learning research",
+      "keywords": ["machine learning", "deep learning", "neural network"],
+      "subcategories": {
+        "1.1": "1.1 Supervised Learning",
+        "1.2": "1.2 Unsupervised Learning",
+        "1.3": "1.3 Reinforcement Learning"
+      }
+    },
+    "2": {
+      "name": "2. Natural Language Processing",
+      "description": "NLP and language model research",
+      "keywords": ["NLP", "language model", "text"],
+      "subcategories": {
+        "2.1": "2.1 Language Models",
+        "2.2": "2.2 Text Classification",
+        "2.3": "2.3 Machine Translation"
+      }
+    },
+    "3": {
+      "name": "3. Computer Vision",
+      "description": "Image and video processing research",
+      "keywords": ["vision", "image", "object detection"],
+      "subcategories": {}
+    },
+    "4": {
+      "name": "4. Uncategorized",
+      "description": "Papers that don't fit into existing categories",
+      "keywords": [],
+      "subcategories": {}
+    }
+  }
+}

@@ -1,0 +1,41 @@
+# Environment variables (contains API keys and sensitive paths)
+.env
+
+# User's category configuration
+categories.json
+
+# Zotero database backups
+*.sqlite
+zotero_temp_backup.sqlite
+
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Note: .env.example is NOT ignored - it should be committed as a template
