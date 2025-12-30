@@ -52,6 +52,7 @@ class CategoryManager:
     def __init__(self):
         self.hierarchy: Dict[str, Dict] = {}
         self.threshold: int = config.app.uncategorized_threshold
+        self.category_root: Optional[Path] = None  # Where categories are stored (root or auto_category)
         self._loaded = False
 
     def load(self) -> bool:
@@ -74,6 +75,12 @@ class CategoryManager:
                 data = json.load(f)
                 self.hierarchy = data.get("categories", {})
                 self.threshold = data.get("uncategorized_threshold", config.app.uncategorized_threshold)
+                # Load category_root - where category folders are located
+                category_root_str = data.get("category_root")
+                if category_root_str:
+                    self.category_root = Path(category_root_str)
+                else:
+                    self.category_root = config.paths.auto_category  # Default
                 self._loaded = True
                 return True
         except json.JSONDecodeError as e:
@@ -91,8 +98,17 @@ class CategoryManager:
             "uncategorized_threshold": self.threshold,
             "categories": self.hierarchy
         }
+        # Only save category_root if it's different from default
+        if self.category_root and self.category_root != config.paths.auto_category:
+            data["category_root"] = str(self.category_root)
         with open(config.paths.categories_file, 'w') as f:
             json.dump(data, f, indent=2)
+
+    def get_category_root(self) -> Path:
+        """Get the root path where category folders are stored."""
+        if self.category_root:
+            return self.category_root
+        return config.paths.auto_category
 
     def get_folder_path(self, category_code: str) -> Path:
         """
@@ -177,7 +193,8 @@ class CategoryManager:
 
                     depth = subcat_code.count(".")
                     indent = "  " * (depth - 1)
-                    lines.append(f"{indent}- {subcat_name}")
+                    # Include both code and name so AI returns correct code
+                    lines.append(f"{indent}- {subcat_code}: {subcat_name}")
 
         uncat_code = self.get_uncategorized_code()
         uncat_name = self.get_uncategorized_name()

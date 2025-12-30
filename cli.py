@@ -186,9 +186,18 @@ Examples:
                 print(f"Folder structure updated in {config.paths.auto_category}")
                 return
 
-        # Case 2: No categories.json but existing folders - generate from folders
-        if file_manager.has_existing_folders():
-            print(f"\nFound existing category folders in {config.paths.auto_category}")
+        # Case 2: Check for existing folders - first in root directory, then in auto_category
+        root_has_folders = file_manager.has_existing_folders_in_root()
+        auto_has_folders = file_manager.has_existing_folders()
+
+        if root_has_folders or auto_has_folders:
+            if root_has_folders:
+                scan_path = config.paths.papers_root
+                print(f"\nFound existing category folders in {config.paths.papers_root}")
+            else:
+                scan_path = config.paths.auto_category
+                print(f"\nFound existing category folders in {config.paths.auto_category}")
+
             print("\nOptions:")
             print("  1. Generate categories.json from existing folders (recommended)")
             print("  2. Create new categories from template (ignores existing folders)")
@@ -196,7 +205,7 @@ Examples:
 
             if response != '2':
                 print("\nScanning existing folders...")
-                categories = file_manager.scan_existing_folders()
+                categories = file_manager.scan_existing_folders(scan_path)
 
                 if categories:
                     # Check for auto-numbered (originally unnumbered) folders
@@ -217,6 +226,10 @@ Examples:
                         "uncategorized_threshold": 20,
                         "categories": categories
                     }
+
+                    # Save category_root if using root directory (not default auto_category)
+                    if scan_path == config.paths.papers_root:
+                        data["category_root"] = str(scan_path)
 
                     with open(config.paths.categories_file, 'w') as f:
                         json.dump(data, f, indent=2)

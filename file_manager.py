@@ -67,7 +67,13 @@ class FileManager:
 
     def __init__(self):
         self.inbox_path = config.paths.inbox
-        self.output_path = config.paths.auto_category
+        self.output_path = config.paths.auto_category  # Default, may be overridden
+
+    def get_output_path(self) -> Path:
+        """Get the actual output path (from category_manager if loaded, else default)."""
+        if category_manager._loaded and category_manager.category_root:
+            return category_manager.category_root
+        return self.output_path
 
     # =========================================================================
     # Inbox Operations
@@ -99,89 +105,105 @@ class FileManager:
     # Category Folder Operations
     # =========================================================================
 
-    def scan_existing_folders(self) -> Dict:
+    def scan_existing_folders(self, scan_path: Path = None) -> Dict:
         """
         Scan existing category folders and generate category hierarchy.
 
         Handles:
         - Numbered folders: "1. Category Name" or "1.1 Subcategory"
-        - Unnumbered folders: "Category Name" (will auto-assign numbers)
+        - Unnumbered folders: "Category Name" (will auto-assign numbers starting from 1)
         - Flat structures (no subcategories)
         - Recursive structures (nested subcategories)
 
+        Args:
+            scan_path: Path to scan. Defaults to output_path (Papers Auto Category).
+                       Pass papers_root to scan the parent directory directly.
+
         Returns:
-            Dict suitable for categories.json
+            Dict suitable for categories.json (ordered by category number)
         """
-        categories = {}
+        target_path = scan_path or self.output_path
 
-        if not self.output_path.exists():
-            return categories
+        if not target_path.exists():
+            return {}
 
-        # Pattern to match numbered folder names
+        # Pattern to match numbered folder names like "1. Category" or "1 Category"
         numbered_pattern = re.compile(r'^(\d+(?:\.\d+)*)\.?\s+(.+)$')
 
-        # Collect all top-level folders
+        # Collect all top-level folders (exclude special folders)
+        exclude_folders = {'Inbox', 'paper_categorizer', '.git', '__pycache__', 'venv', 'Papers Auto Category'}
         folders = []
-        for item in sorted(self.output_path.iterdir()):
-            if item.is_dir() and not item.name.startswith('.'):
+        for item in sorted(target_path.iterdir()):
+            if item.is_dir() and not item.name.startswith('.') and item.name not in exclude_folders:
                 folders.append(item)
 
         if not folders:
-            return categories
+            return {}
 
-        # Check if folders are numbered or not
-        numbered_folders = []
-        unnumbered_folders = []
+        # Separate numbered vs unnumbered folders
+        numbered_folders = []  # List of (folder, code_str)
+        unnumbered_folders = []  # List of folder
 
         for folder in folders:
             match = numbered_pattern.match(folder.name)
-            if match and '.' not in match.group(1):  # Main category (no dots)
+            if match and '.' not in match.group(1):  # Main category (no dots in code)
                 numbered_folders.append((folder, match.group(1)))
             else:
                 unnumbered_folders.append(folder)
 
-        # If we have numbered folders, use them
-        if numbered_folders:
-            for folder, code in numbered_folders:
-                categories[code] = {
-                    "name": folder.name,
-                    "description": "",
-                    "keywords": [],
-                    "subcategories": {}
-                }
-                # Scan for subcategories
-                self._scan_subcategories(folder, code, categories[code]["subcategories"], numbered_pattern)
+        # Build categories dict - collect all first, then sort by number
+        categories_list = []  # List of (code_int, code_str, category_dict, folder)
 
-        # For unnumbered folders, auto-assign codes but keep original names
-        if unnumbered_folders:
-            # Find next available number
-            existing_nums = [int(c) for c in categories.keys()] if categories else []
-            next_num = max(existing_nums) + 1 if existing_nums else 1
+        # Process numbered folders first
+        for folder, code in numbered_folders:
+            cat_dict = {
+                "name": folder.name,
+                "description": "",
+                "keywords": [],
+                "subcategories": {}
+            }
+            self._scan_subcategories(folder, code, cat_dict["subcategories"], numbered_pattern)
+            categories_list.append((int(code), code, cat_dict, folder))
 
-            for folder in unnumbered_folders:
-                code = str(next_num)
-                # Keep original folder name (no renaming on disk)
-                categories[code] = {
-                    "name": folder.name,  # Use actual folder name
-                    "description": "",
-                    "keywords": [],
-                    "subcategories": {},
-                    "_auto_numbered": True  # Flag for CLI to show info
-                }
-                # Scan for subcategories (unnumbered)
-                self._scan_subcategories_unnumbered(folder, code, categories[code]["subcategories"])
+        # Auto-number unnumbered folders starting from 1 (or next available)
+        used_nums = {item[0] for item in categories_list}
+        next_num = 1
+
+        for folder in unnumbered_folders:
+            # Find next unused number
+            while next_num in used_nums:
                 next_num += 1
 
-        # Add Uncategorized if not present
+            code = str(next_num)
+            cat_dict = {
+                "name": folder.name,
+                "description": "",
+                "keywords": [],
+                "subcategories": {},
+                "_auto_numbered": True
+            }
+            # Use the enhanced subcategory scanner for all folders
+            self._scan_subcategories(folder, code, cat_dict["subcategories"], numbered_pattern)
+            categories_list.append((next_num, code, cat_dict, folder))
+            used_nums.add(next_num)
+            next_num += 1
+
+        # Sort by category number and build final dict
+        categories_list.sort(key=lambda x: x[0])
+        categories = {}
+        for _, code, cat_dict, _ in categories_list:
+            categories[code] = cat_dict
+
+        # Add Uncategorized at the end if not present
         has_uncategorized = any(
             "uncategorized" in info.get("name", "").lower()
             for info in categories.values()
         )
         if not has_uncategorized:
-            existing_nums = [int(c) for c in categories.keys()]
-            next_num = max(existing_nums) + 1 if existing_nums else 1
-            categories[str(next_num)] = {
-                "name": f"{next_num}. Uncategorized",
+            max_num = max(int(c) for c in categories.keys()) if categories else 0
+            uncat_num = max_num + 1
+            categories[str(uncat_num)] = {
+                "name": f"{uncat_num}. Uncategorized",
                 "description": "Papers that don't fit into existing categories",
                 "keywords": [],
                 "subcategories": {}
@@ -191,17 +213,30 @@ class FileManager:
 
     def _scan_subcategories(self, parent_path: Path, parent_code: str,
                             subcategories: Dict, pattern: re.Pattern) -> None:
-        """Recursively scan for numbered subcategories."""
+        """Recursively scan for subcategories (supports multiple formats)."""
+        # Pattern for "NN-Name" format (e.g., "01-LLM_Applications")
+        dash_pattern = re.compile(r'^(\d+)-(.+)$')
+
         for item in sorted(parent_path.iterdir()):
             if not item.is_dir() or item.name.startswith('.'):
                 continue
 
+            # Try standard numbered format first (e.g., "1.1 Subcategory")
             match = pattern.match(item.name)
             if match:
                 code = match.group(1)
-                # Build relative path from main category
                 rel_path = str(item.relative_to(parent_path.parent))
                 subcategories[code] = rel_path
+                self._scan_subcategories(item, code, subcategories, pattern)
+                continue
+
+            # Try dash format (e.g., "01-LLM_Applications")
+            dash_match = dash_pattern.match(item.name)
+            if dash_match:
+                sub_num = dash_match.group(1).lstrip('0') or '0'  # Remove leading zeros
+                code = f"{parent_code}.{sub_num}"
+                # Store just the folder name as the path
+                subcategories[code] = item.name
                 # Recurse into deeper subcategories
                 self._scan_subcategories(item, code, subcategories, pattern)
 
@@ -224,24 +259,40 @@ class FileManager:
             # Uncomment below to support deep nesting for unnumbered folders
             # self._scan_subcategories_unnumbered(folder, code, subcategories)
 
-    def has_existing_folders(self) -> bool:
+    def has_existing_folders(self, path: Path = None) -> bool:
         """Check if category folders already exist."""
-        if not self.output_path.exists():
+        check_path = path or self.output_path
+        if not check_path.exists():
             return False
 
-        for item in self.output_path.iterdir():
+        for item in check_path.iterdir():
             if item.is_dir() and not item.name.startswith('.'):
+                return True
+        return False
+
+    def has_existing_folders_in_root(self) -> bool:
+        """Check if category folders exist directly in papers_root (parent folder)."""
+        root_path = config.paths.papers_root
+        if not root_path.exists():
+            return False
+
+        # Folders to exclude (not actual categories)
+        exclude_folders = {'Inbox', 'paper_categorizer', '.git', '__pycache__', 'venv', 'Papers Auto Category'}
+
+        for item in root_path.iterdir():
+            if item.is_dir() and not item.name.startswith('.') and item.name not in exclude_folders:
                 return True
         return False
 
     def create_category_folders(self) -> None:
         """Create all category folders based on category hierarchy."""
         category_manager.ensure_loaded()
+        output_path = self.get_output_path()
 
-        self.output_path.mkdir(exist_ok=True)
+        output_path.mkdir(exist_ok=True)
 
         for cat_num, info in category_manager.hierarchy.items():
-            main_path = self.output_path / info["name"]
+            main_path = output_path / info["name"]
             main_path.mkdir(exist_ok=True)
 
             for sub_code, sub_path in info.get("subcategories", {}).items():
@@ -262,7 +313,7 @@ class FileManager:
         category_manager.ensure_loaded()
 
         folder_path = category_manager.get_folder_path(category_code)
-        dest_folder = self.output_path / folder_path
+        dest_folder = self.get_output_path() / folder_path
         dest_folder.mkdir(parents=True, exist_ok=True)
 
         dest_path = dest_folder / source_path.name
@@ -283,7 +334,7 @@ class FileManager:
         """Get the full path to a category folder."""
         category_manager.ensure_loaded()
         folder_path = category_manager.get_folder_path(category_code)
-        return self.output_path / folder_path
+        return self.get_output_path() / folder_path
 
     # =========================================================================
     # File Rename Operations
@@ -338,12 +389,13 @@ class FileManager:
             Dict mapping category folder names to lists of papers
         """
         all_papers: Dict[str, List[CategorizedPaper]] = {}
+        output_path = self.get_output_path()
 
-        if not self.output_path.exists():
+        if not output_path.exists():
             return all_papers
 
-        for pdf_path in self.output_path.rglob("*.pdf"):
-            rel_path = pdf_path.relative_to(self.output_path)
+        for pdf_path in output_path.rglob("*.pdf"):
+            rel_path = pdf_path.relative_to(output_path)
             parts = str(rel_path.parent).split("/")
 
             if parts and parts[0] and parts[0] != ".":
@@ -373,7 +425,7 @@ class FileManager:
 
     def count_uncategorized(self) -> int:
         """Count papers in the Uncategorized folder."""
-        uncat_folder = self.output_path / category_manager.get_uncategorized_folder()
+        uncat_folder = self.get_output_path() / category_manager.get_uncategorized_folder()
         if not uncat_folder.exists():
             return 0
 
@@ -383,7 +435,7 @@ class FileManager:
 
     def get_uncategorized_papers(self) -> List[PaperFile]:
         """Get all papers in the Uncategorized folder."""
-        uncat_folder = self.output_path / category_manager.get_uncategorized_folder()
+        uncat_folder = self.get_output_path() / category_manager.get_uncategorized_folder()
         if not uncat_folder.exists():
             return []
 

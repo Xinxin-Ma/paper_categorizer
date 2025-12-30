@@ -72,14 +72,19 @@ class AIProvider(ABC):
 
         uncat_name = category_manager.get_uncategorized_name()
 
-        return f"""You are an expert academic paper categorizer. Your task is to categorize research papers into the most appropriate category from the provided hierarchy.
+        return f"""You are an expert categorizer for books and papers. Your task is to categorize items into the most appropriate category from the provided hierarchy.
 
 ## Instructions:
-1. Analyze the paper's title and abstract carefully
-2. Identify the PRIMARY focus and contribution of the paper
-3. Select the MOST SPECIFIC category that fits (prefer subcategories over parent categories)
-4. If the paper fits multiple categories, choose the PRIMARY one
-5. If the paper does NOT fit any existing category, use "{uncat_name}"
+1. Analyze the title and abstract/context carefully
+2. Identify the PRIMARY subject matter and discipline - focus on WHAT the content is about, not HOW it's delivered
+3. Select the MOST SPECIFIC subcategory that fits (always prefer subcategories like "5.3" over main categories like "5")
+4. If the item fits multiple categories, choose based on primary discipline/field
+
+## IMPORTANT - Avoid Common Mistakes:
+- "Computer-Based Testing" or "Automated Scoring" → Psychology/Psychometrics (educational assessment), NOT Computer Science
+- "Machine Learning for X" → If X is the main topic (biology, psychology, etc.), categorize under X
+- "Digital/Online X" → Categorize by the subject X, not by the delivery method
+- Technical terms in title don't automatically mean Computer Science
 
 ## Response Format:
 You MUST respond in valid JSON format with these fields:
@@ -91,10 +96,7 @@ You MUST respond in valid JSON format with these fields:
     "alternative_categories": ["other possible categories if any"]
 }}
 
-Examples:
-- For a paper on neural contextual bandits: {{"category_code": "1.1.2", "category_name": "Neural & Non-linear Contextual Bandits", ...}}
-- For a paper on LLM evaluation: {{"category_code": "3.1", "category_name": "LLM Evaluation & Benchmarking", ...}}
-- For a paper on personality at work: {{"category_code": "6", "category_name": "Personality Psychology & Assessment", ...}}
+CRITICAL: Use the EXACT category codes shown in the hierarchy (e.g., "5.3", "13.8"), not made-up codes.
 
 """ + category_manager.generate_prompt()
 
