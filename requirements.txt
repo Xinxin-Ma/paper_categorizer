@@ -10,3 +10,9 @@ google-generativeai>=0.5.0  # For Gemini
 
 # PDF Support (optional but recommended)
 PyPDF2>=3.0.0
+
+# OCR Support for scanned PDFs (optional)
+# Requires tesseract to be installed: brew install tesseract
+pytesseract>=0.3.10
+pdf2image>=1.16.0
+# Requires poppler: brew install poppler

@@ -12,12 +12,13 @@ Responsibilities:
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Optional, List
 
 from .config import config
 from .categories import category_manager, CategoriesNotFoundError
 from .ai_providers import ProviderFactory, AIProvider
-from .pdf_utils import extract_text, is_pdf_support_available
+from .pdf_utils import extract_text, extract_text_ocr, is_pdf_support_available, is_ocr_available, filename_to_title
 from .zotero_db import zotero_db
 from .file_manager import file_manager, PaperFile
 from .summarizer import summarizer, ProcessingResult
@@ -429,6 +430,209 @@ Examples:
             except Exception as e:
                 print(f"Error: {e}\n")
 
+    def _filename_needs_rename(self, filename: str) -> bool:
+        """
+        Check if a filename looks like it needs renaming to a proper title.
+
+        Returns True for filenames that are likely NOT proper titles:
+        - arXiv IDs (e.g., "2510.26787v1.pdf")
+        - Pure numeric names
+        - Very short names (less than 10 chars without extension)
+        - Names with only underscores/hyphens and numbers
+
+        Returns False for filenames that look like proper titles.
+        """
+        import re
+
+        # Remove extension
+        name = filename.replace('.pdf', '').replace('.PDF', '')
+
+        # arXiv ID pattern (e.g., 2510.26787, 2510.26787v1)
+        if re.match(r'^\d{4}\.\d{4,5}(v\d+)?$', name):
+            return True
+
+        # Pure numeric or mostly numeric
+        if re.match(r'^[\d\s\-_.]+$', name):
+            return True
+
+        # Very short names (likely not a full title)
+        if len(name) < 10:
+            return True
+
+        # Names that look like IDs (all caps with numbers)
+        if re.match(r'^[A-Z0-9\-_]+$', name) and len(name) < 30:
+            return True
+
+        return False
+
+    def _titles_match(self, filename: str, extracted_title: str) -> bool:
+        """
+        Check if the filename already matches the extracted title.
+
+        Normalizes both strings for comparison.
+        """
+        import re
+
+        # Normalize filename (remove extension, replace separators)
+        name = filename.replace('.pdf', '').replace('.PDF', '')
+        name = name.replace('-', ' ').replace('_', ' ')
+        name = re.sub(r'\s+', ' ', name).strip().lower()
+
+        # Normalize extracted title
+        title = re.sub(r'\s+', ' ', extracted_title).strip().lower()
+
+        # Exact match
+        if name == title:
+            return True
+
+        # One contains the other (for truncated filenames)
+        if len(name) > 20 and (name in title or title in name):
+            return True
+
+        # Check if significant portion matches (for truncated titles)
+        if len(name) > 50 and title.startswith(name[:50]):
+            return True
+
+        return False
+
+    def _extract_title_from_pdf(self, provider: AIProvider, pdf_path: Path) -> Optional[str]:
+        """
+        Extract the paper title from PDF content using AI.
+
+        Args:
+            provider: AI provider to use
+            pdf_path: Path to the PDF file
+
+        Returns:
+            Extracted title, or None if extraction fails
+        """
+        # Try PyPDF2 first
+        text = extract_text(pdf_path, max_pages=1) if is_pdf_support_available() else None
+        used_ocr = False
+
+        # Fall back to OCR if PyPDF2 fails
+        if not text or len(text.strip()) < 50:
+            if is_ocr_available():
+                print(f"  Trying OCR extraction...")
+                text = extract_text_ocr(pdf_path, max_pages=1)
+                used_ocr = True
+
+        if not text or len(text.strip()) < 50:
+            if not is_pdf_support_available() and not is_ocr_available():
+                print(f"  Warning: No PDF extraction available (install PyPDF2 or pytesseract)")
+            elif not text:
+                if is_ocr_available():
+                    print(f"  Warning: No text extracted even with OCR")
+                else:
+                    print(f"  Warning: No text extracted (scanned PDF? Install pytesseract for OCR)")
+            else:
+                print(f"  Warning: Insufficient text extracted ({len(text.strip())} chars)")
+            return None
+
+        if used_ocr:
+            print(f"  OCR extracted {len(text.strip())} chars")
+
+        prompt = f"""Extract ONLY the title of this academic paper from the text below.
+Return ONLY the title, nothing else. No quotes, no explanation.
+
+Text from first page:
+{text[:1500]}"""
+
+        try:
+            # Use a simple prompt to get just the title
+            result = provider.query(prompt)
+            if result:
+                # Clean up the title
+                title = result.strip().strip('"\'')
+                # Replace newlines with spaces (titles can span multiple lines)
+                title = ' '.join(title.split())
+                # Remove common prefixes the AI might add
+                for prefix in ["Title:", "The title is:", "Paper title:"]:
+                    if title.lower().startswith(prefix.lower()):
+                        title = title[len(prefix):].strip()
+                if len(title) > 10 and len(title) < 300:
+                    return title
+                else:
+                    print(f"  Warning: Extracted title invalid (len={len(title)}): {title[:50]}...")
+            else:
+                print(f"  Warning: AI returned empty response")
+        except Exception as e:
+            print(f"  Warning: Could not extract title: {e}")
+
+        return None
+
+    def _rename_papers_by_title(self, provider: AIProvider, papers: List, dry_run: bool) -> List:
+        """
+        Rename papers in Inbox if their filename doesn't match the paper's actual title.
+
+        For each paper:
+        1. Check if filename looks like it needs renaming (arXiv IDs, numeric names, etc.)
+        2. Extract the actual title from the PDF using AI
+        3. Compare with current filename
+        4. Rename if they don't match
+
+        Args:
+            provider: AI provider to use
+            papers: List of PaperFile objects
+            dry_run: If True, only preview changes
+
+        Returns:
+            Updated list of PaperFile objects with new paths
+        """
+        print("\n" + "-"*40)
+        print("Step 1: Checking and renaming papers by title")
+        print("-"*40)
+
+        updated_papers = []
+        renamed_count = 0
+        skipped_count = 0
+
+        for i, paper in enumerate(papers, 1):
+            needs_check = self._filename_needs_rename(paper.filename)
+
+            if needs_check:
+                print(f"[{i}/{len(papers)}] {paper.filename[:40]}... (needs title extraction)")
+            else:
+                print(f"[{i}/{len(papers)}] {paper.filename[:40]}... (checking title match)")
+
+            # Extract title from PDF
+            title = self._extract_title_from_pdf(provider, paper.path)
+
+            if title:
+                # Check if filename already matches title
+                if self._titles_match(paper.filename, title):
+                    print(f"  ✓ Filename already matches title")
+                    paper.title = title
+                    updated_papers.append(paper)
+                    skipped_count += 1
+                else:
+                    print(f"  Title: {title[:60]}{'...' if len(title) > 60 else ''}")
+
+                    if not dry_run:
+                        new_path = file_manager.rename_file(paper.path, title)
+                        # Create updated PaperFile with new path
+                        updated_paper = PaperFile(
+                            path=new_path,
+                            filename=new_path.name,
+                            title=title
+                        )
+                        updated_papers.append(updated_paper)
+                        renamed_count += 1
+                    else:
+                        print(f"  [DRY RUN] Would rename to: {title[:50]}.pdf")
+                        paper.title = title
+                        updated_papers.append(paper)
+                        renamed_count += 1
+            else:
+                print(f"  Could not extract title, keeping original name")
+                updated_papers.append(paper)
+                skipped_count += 1
+
+        print()
+        print(f"Renamed: {renamed_count}, Kept original: {skipped_count}")
+        print()
+        return updated_papers
+
     def _cmd_batch(self, provider_name: Optional[str], dry_run: bool) -> None:
         """Run batch processing."""
         provider = ProviderFactory.get_provider(provider_name)
@@ -456,8 +660,16 @@ Examples:
 
         print(f"Found {len(papers)} PDF files to process.\n")
 
+        # Step 1: Rename papers by their extracted titles
+        papers = self._rename_papers_by_title(provider, papers, dry_run)
+
         if not dry_run:
             file_manager.create_category_folders()
+
+        # Step 2: Categorize papers
+        print("-"*40)
+        print("Step 2: Categorizing papers")
+        print("-"*40)
 
         # Backup Zotero
         zotero_backup_ok = False

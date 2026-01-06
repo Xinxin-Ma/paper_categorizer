@@ -66,6 +66,19 @@ class AIProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    def query(self, prompt: str) -> str:
+        """
+        Send a simple query to the AI and return the raw response.
+
+        Args:
+            prompt: The prompt to send
+
+        Returns:
+            Raw text response from the AI
+        """
+        pass
+
     def _get_system_prompt(self) -> str:
         """Generate the system prompt with current categories."""
         category_manager.ensure_loaded()
@@ -166,6 +179,17 @@ class GeminiProvider(AIProvider):
         response = chat.send_message(self._get_system_prompt() + "\n\n" + user_prompt)
         return self._parse_response(response.text)
 
+    def query(self, prompt: str) -> str:
+        model = self.genai.GenerativeModel(
+            model_name=self.model_name,
+            generation_config={
+                "temperature": 0.1,
+                "max_output_tokens": 512,
+            }
+        )
+        response = model.generate_content(prompt)
+        return response.text
+
 
 class ClaudeProvider(AIProvider):
     """Anthropic Claude API provider."""
@@ -194,6 +218,16 @@ class ClaudeProvider(AIProvider):
 
         response_text = message.content[0].text
         return self._parse_response(response_text)
+
+    def query(self, prompt: str) -> str:
+        message = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=512,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return message.content[0].text
 
 
 class OpenAIProvider(AIProvider):
@@ -225,6 +259,17 @@ class OpenAIProvider(AIProvider):
 
         response_text = response.choices[0].message.content
         return self._parse_response(response_text)
+
+    def query(self, prompt: str) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=512
+        )
+        return response.choices[0].message.content
 
 
 class ProviderFactory:

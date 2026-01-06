@@ -22,10 +22,23 @@ try:
 except ImportError:
     HAS_PYPDF2 = False
 
+# Check for OCR availability
+try:
+    import pytesseract
+    from pdf2image import convert_from_path
+    HAS_OCR = True
+except ImportError:
+    HAS_OCR = False
+
 
 def is_pdf_support_available() -> bool:
     """Check if PDF text extraction is available."""
     return HAS_PYPDF2
+
+
+def is_ocr_available() -> bool:
+    """Check if OCR text extraction is available."""
+    return HAS_OCR
 
 
 def extract_text(pdf_path: Path, max_pages: Optional[int] = None) -> str:
@@ -55,6 +68,39 @@ def extract_text(pdf_path: Path, max_pages: Optional[int] = None) -> str:
         return text[:3000]  # Limit total length
     except Exception as e:
         print(f"  Warning: Could not extract PDF text: {e}")
+        return ""
+
+
+def extract_text_ocr(pdf_path: Path, max_pages: Optional[int] = None) -> str:
+    """
+    Extract text from PDF using OCR (for scanned/image-based PDFs).
+
+    Args:
+        pdf_path: Path to the PDF file
+        max_pages: Maximum number of pages to extract (default: 1 for title extraction)
+
+    Returns:
+        Extracted text, or empty string if extraction fails
+    """
+    if not HAS_OCR:
+        return ""
+
+    if max_pages is None:
+        max_pages = 1  # Default to first page only for OCR (slower)
+
+    try:
+        # Convert PDF pages to images
+        images = convert_from_path(str(pdf_path), first_page=1, last_page=max_pages, dpi=200)
+
+        text = ""
+        for image in images:
+            page_text = pytesseract.image_to_string(image)
+            if page_text:
+                text += page_text + "\n"
+
+        return text[:3000].strip()  # Limit total length
+    except Exception as e:
+        print(f"  Warning: OCR extraction failed: {e}")
         return ""
 
 

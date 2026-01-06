@@ -58,18 +58,18 @@ cp .env.example .env
 
 # 5. Initialize the system
 cd ~/Documents/Papers
-python -m paper_categorizer --init
+./paper_categorizer/run.sh --init
 # This will either:
 #   - Scan existing category folders and generate categories.json
 #   - Or create a template categories.json for you to customize
 
 # 6. (If using template) Edit categories.json
 # Skip this if --init scanned your existing folders
-cp categories.json.example categories.json  # Optional: start from example
+cp paper_categorizer/categories.json.example paper_categorizer/categories.json  # Optional: start from example
 # Edit categories.json to define your own paper categories
 
 # 7. Check Zotero status (optional)
-python -m paper_categorizer --zotero-status
+./paper_categorizer/run.sh --zotero-status
 ```
 
 ### Basic Usage
@@ -78,14 +78,18 @@ python -m paper_categorizer --zotero-status
 # Run from the Papers folder
 cd ~/Documents/Papers
 
-# Interactive mode - get category for a single paper
-python -m paper_categorizer --interactive
+# Option 1: Use the wrapper script (recommended - handles venv automatically)
+./paper_categorizer/run.sh --batch
 
-# Batch process all PDFs in Inbox
+# Option 2: Activate venv manually
+source paper_categorizer/venv/bin/activate
 python -m paper_categorizer --batch
 
+# Interactive mode - get category for a single paper
+./paper_categorizer/run.sh --interactive
+
 # Dry run - preview without making changes
-python -m paper_categorizer --batch --dry-run
+./paper_categorizer/run.sh --batch --dry-run
 ```
 
 ---
@@ -115,7 +119,7 @@ ZOTERO_STORAGE_PATH=~/Zotero/storage
 ### Check Zotero Status
 
 ```bash
-python -m paper_categorizer --zotero-status
+./paper_categorizer/run.sh --zotero-status
 ```
 
 Output:
@@ -141,6 +145,26 @@ Collections: 25
    - If found: Updates the paper's collection to match the AI category
    - If not found: Creates a new entry with the PDF attachment
 3. **After processing**: The backup remains until the next batch run
+
+### Adding New Papers to Zotero
+
+When a paper is not found in Zotero, the system automatically:
+
+1. **Creates a new item** as "Journal Article" type
+2. **Sets the title** from the PDF filename or AI-extracted title
+3. **Copies the PDF** to Zotero's storage folder (`~/Zotero/storage/<key>/filename.pdf`)
+4. **Links the attachment** to the item record
+5. **Assigns to collection** matching the AI-determined category
+
+The paper appears in Zotero after you restart Zotero (or it syncs automatically if open).
+
+### Updating Existing Papers
+
+When a paper is already in Zotero:
+
+1. **Searches by title** (partial match) or **filename** in attachments
+2. **Creates collection** if the category doesn't exist yet
+3. **Adds item to collection** (doesn't remove from other collections)
 
 ### Safety Features
 
@@ -225,6 +249,7 @@ Documents/Papers/
 ├── Papers_Summary.md           # Auto-generated summary
 └── paper_categorizer/          # Main package
     ├── venv/                   # Python virtual environment
+    ├── run.sh                  # Wrapper script (recommended way to run)
     ├── __init__.py             # Package marker
     ├── __main__.py             # Entry point
     ├── config.py               # Configuration management
@@ -249,8 +274,8 @@ Documents/Papers/
 ### Batch Processing with Zotero
 
 ```bash
-# Process papers with Zotero integration
-python -m paper_categorizer --batch
+# Process papers with Zotero integration (close Zotero first!)
+./paper_categorizer/run.sh --batch
 
 # Output:
 # ============================================================
@@ -293,7 +318,7 @@ python -m paper_categorizer --batch
 ZOTERO_ENABLED=false
 
 # Or just run - it will skip Zotero if not configured
-python -m paper_categorizer --batch
+./paper_categorizer/run.sh --batch
 
 # Output shows:
 # Zotero integration: DISABLED
@@ -423,6 +448,12 @@ When the threshold is exceeded, you'll get a warning suggesting to review catego
 
 ## Troubleshooting
 
+### "No PDF extraction available" / Papers go to Uncategorized
+- This happens when running with system Python instead of the virtual environment
+- **Solution**: Use `./paper_categorizer/run.sh` instead of `python -m paper_categorizer`
+- Or activate the venv first: `source paper_categorizer/venv/bin/activate`
+- PyPDF2 is installed in the venv but not in system Python
+
 ### "No API key found"
 - Create `.env` file with at least one API key
 - Check the key is correctly formatted (no quotes needed)
@@ -453,6 +484,7 @@ cp ~/Zotero/zotero_temp_backup.sqlite ~/Zotero/zotero.sqlite
 
 | File | Description |
 |------|-------------|
+| `run.sh` | Wrapper script that activates venv (recommended way to run) |
 | `__init__.py` | Package marker with version info |
 | `__main__.py` | Entry point for `python -m paper_categorizer` |
 | `config.py` | Configuration management (Singleton pattern) |
@@ -482,4 +514,4 @@ cp ~/Zotero/zotero_temp_backup.sqlite ~/Zotero/zotero.sqlite
 
 ---
 
-*Last updated: December 30, 2024 (v5.0 - Modular refactoring)*
+*Last updated: January 6, 2026 (v5.1 - Added run.sh wrapper script)*
