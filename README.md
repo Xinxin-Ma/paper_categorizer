@@ -1,214 +1,265 @@
-# Paper Categorization System
+# Paper Categorizer
 
-A system for organizing and categorizing academic papers using AI-powered classification. Supports **Google Gemini**, **Anthropic Claude**, and **OpenAI** APIs, with optional **Zotero integration**.
+AI-powered academic paper organization tool. Automatically categorize your research papers using **Google Gemini**, **Anthropic Claude**, or **OpenAI**.
 
----
+## Features
 
-## Overview
-
-This system provides:
-- **Multi-provider support** - Works with Gemini, Claude, or OpenAI (uses first available)
-- **Zotero integration** - Automatically sync categories to your Zotero library
-- **Interactive categorization** - Enter a paper title and get its category instantly
-- **Batch processing** - Automatically sort PDFs from an Inbox folder into categorized folders
-- **Dynamic categories** - Categories are loaded from `categories.json` and fully customizable
-- **Auto-generated summaries** - Papers_Summary.md shows newly processed papers at the top
-- **Uncategorized threshold alerts** - Get warnings when too many papers are uncategorized
-- **AI-powered category suggestions** - Analyze uncategorized papers and suggest new categories
-- **PDF text extraction** - Optionally extracts abstract from PDFs for better categorization
+- **Multi-provider AI support** - Works with Gemini, Claude, or OpenAI
+- **Interactive categorization** - Enter a paper title, get its category instantly
+- **Batch processing** - Automatically sort PDFs from Inbox into category folders
+- **Dynamic categories** - Fully customizable category hierarchy
+- **Optional Zotero integration** - Sync categories to your Zotero library
 
 ---
 
-## Workflow
+## Demo
 
-The typical user workflow is:
-
-1. **Add papers to Inbox** - Drop PDF files into the `Inbox/` folder
-2. **Rename if needed** - If the filename doesn't match the paper title, rename it first
-3. **Run batch processing** - The script will:
-   - Categorize each paper using AI
-   - If Zotero is enabled:
-     - Papers already in Zotero: Update their collection/category
-     - Papers not in Zotero: Add them with the PDF attachment
-   - Move files to category folders
-4. **Review results** - Check `Papers_Summary.md` for the updated catalog
+| Function | Description | Demo |
+|----------|-------------|------|
+| [1. Init](#1-initialize-the-system) | First-time setup, creates Inbox folder | ![Init](demo/demo_init.gif) |
+| [2. Interactive](#2-interactive-mode) | Enter title, get category instantly | ![Interactive](demo/demo_interactive.gif) |
+| [3. Batch](#3-batch-mode) | Process all PDFs in Inbox automatically | ![Batch](demo/demo_batch.gif) |
 
 ---
 
 ## Quick Start
 
-### First-Time Setup
+### 1. Initialize the System
+
+> **What it does:** Creates your `Inbox/` folder and generates a `categories.json` template for customization.
+
+<details>
+<summary><strong>Click to see demo</strong></summary>
+
+![Init Demo](demo/demo_init.gif)
+
+**What you'll see:**
+- Inbox folder created at `~/Documents/Papers/Inbox/`
+- Template `categories.json` generated
+- Instructions for customizing your categories
+
+</details>
 
 ```bash
-# 1. Navigate to the paper_categorizer folder
-cd ~/Documents/Papers/paper_categorizer
-
-# 2. Create virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-# Or manually: pip install google-generativeai python-dotenv PyPDF2
-
-# 4. Set up configuration
-cp .env.example .env
-# Edit .env and add your API key (at least one required)
-# Configure Zotero paths if you want Zotero integration
-
-# 5. Initialize the system
 cd ~/Documents/Papers
 ./paper_categorizer/run.sh --init
-# This will either:
-#   - Scan existing category folders and generate categories.json
-#   - Or create a template categories.json for you to customize
-
-# 6. (If using template) Edit categories.json
-# Skip this if --init scanned your existing folders
-cp paper_categorizer/categories.json.example paper_categorizer/categories.json  # Optional: start from example
-# Edit categories.json to define your own paper categories
-
-# 7. Check Zotero status (optional)
-./paper_categorizer/run.sh --zotero-status
 ```
 
-### Basic Usage
+After initialization, edit `categories.json` to define your research areas:
 
-```bash
-# Run from the Papers folder
-cd ~/Documents/Papers
-
-# Option 1: Use the wrapper script (recommended - handles venv automatically)
-./paper_categorizer/run.sh --batch
-
-# Option 2: Activate venv manually
-source paper_categorizer/venv/bin/activate
-python -m paper_categorizer --batch
-
-# Interactive mode - get category for a single paper
-./paper_categorizer/run.sh --interactive
-
-# Dry run - preview without making changes
-./paper_categorizer/run.sh --batch --dry-run
+```
+1. Deep Learning
+   1.1 Architectures & Models
+   1.2 Training & Optimization
+2. Traditional Machine Learning
+   2.1 Supervised Learning
+   2.2 Ensemble Methods
+3. Large Language Models
+   3.1 Model Architecture
+   3.2 Evaluation & Benchmarks
+4. AI Agents
+   4.1 Agent Frameworks
+   4.2 Agent Benchmarks
+5. Natural Language Processing
+6. Computer Vision
+7. Reinforcement Learning
+8. Uncategorized
 ```
 
 ---
 
-## Zotero Integration
+### 2. Interactive Mode
 
-The system can optionally integrate with your Zotero library to:
-- **Update collections** for papers already in Zotero
-- **Add new papers** to Zotero with PDF attachments
-- **Create collection hierarchy** matching your category structure
+> **What it does:** Categorize papers one at a time. Enter a title, get the category instantly with confidence score and reasoning.
 
-### Enable Zotero Integration
+<details>
+<summary><strong>Click to see demo</strong></summary>
 
-Edit `.env` file:
+![Interactive Demo](demo/demo_interactive.gif)
 
-```bash
-# Enable Zotero integration
-ZOTERO_ENABLED=true
+**What you'll see:**
+- Enter paper title: "Attention Is All You Need"
+- AI returns: **1.1 Architectures & Models** (Deep Learning)
+- Confidence level and reasoning provided
+- More examples: GPT-4, AgentBench, Random Forests
 
-# Path to your Zotero database
-ZOTERO_DB_PATH=~/Zotero/zotero.sqlite
-
-# Path to Zotero storage folder
-ZOTERO_STORAGE_PATH=~/Zotero/storage
-```
-
-### Check Zotero Status
+</details>
 
 ```bash
-./paper_categorizer/run.sh --zotero-status
+./paper_categorizer/run.sh --interactive
 ```
 
-Output:
+**Example session:**
 ```
+Paper Title: Attention Is All You Need
+Abstract (optional): [Enter]
+
+Categorizing...
+
 ==================================================
-Zotero Integration Status
-==================================================
-Enabled: Yes
-Database path: /Users/username/Zotero/zotero.sqlite
-Database exists: Yes
-Storage path: /Users/username/Zotero/storage
-Storage exists: Yes
-Papers in Zotero: 150
-Collections: 25
+Category: 1.1 Architectures & Models
+Folder:   1. Deep Learning/1.1 Architectures & Models
+Confidence: high
+Reasoning: Seminal transformer architecture paper
 ==================================================
 ```
 
-### How Zotero Integration Works
+**Try these paper titles:**
+| Paper Title | Category |
+|-------------|----------|
+| "Attention Is All You Need" | Deep Learning |
+| "GPT-4 Technical Report" | Large Language Models |
+| "AgentBench: Evaluating LLMs as Agents" | AI Agents |
+| "Random Forests" | Traditional Machine Learning |
 
-1. **Before processing**: Creates a backup of your Zotero database (`zotero_temp_backup.sqlite`)
-2. **For each paper**:
-   - Searches Zotero by title or filename
-   - If found: Updates the paper's collection to match the AI category
-   - If not found: Creates a new entry with the PDF attachment
-3. **After processing**: The backup remains until the next batch run
+---
 
-### Adding New Papers to Zotero
+### 3. Batch Mode
 
-When a paper is not found in Zotero, the system automatically:
+> **What it does:** Automatically process all PDFs in your Inbox folder. Extracts titles from PDFs, renames files accordingly, categorizes each paper, and moves them to the appropriate folder.
 
-1. **Creates a new item** as "Journal Article" type
-2. **Sets the title** from the PDF filename or AI-extracted title
-3. **Copies the PDF** to Zotero's storage folder (`~/Zotero/storage/<key>/filename.pdf`)
-4. **Links the attachment** to the item record
-5. **Assigns to collection** matching the AI-determined category
+<details>
+<summary><strong>Click to see demo</strong></summary>
 
-The paper appears in Zotero after you restart Zotero (or it syncs automatically if open).
+![Batch Demo](demo/demo_batch.gif)
 
-### Updating Existing Papers
+**What you'll see:**
+- 3 papers in Inbox (LLM agent benchmark papers)
+- Step 1: Auto-rename - extracts title from PDF and renames file (e.g., arXiv IDs → proper titles)
+- Step 2: AI categorization with confidence scores
+- Papers moved to `4. AI Agents/` subfolder
+- Summary: 3 processed, 3 successful, 0 failed
+- **Zotero integration: DISABLED** (shown in this demo)
 
-When a paper is already in Zotero:
+</details>
 
-1. **Searches by title** (partial match) or **filename** in attachments
-2. **Creates collection** if the category doesn't exist yet
-3. **Adds item to collection** (doesn't remove from other collections)
+```bash
+# Drop papers into Inbox/
+cp ~/Downloads/*.pdf Inbox/
 
-### Safety Features
+# Process all papers
+./paper_categorizer/run.sh --batch
+```
 
-- **Automatic backup**: Database is backed up before any modifications
-- **Single backup**: Old backup is deleted before creating new one
-- **Dry run support**: Use `--dry-run` to preview Zotero changes without modifying
-- **Disable option**: Set `ZOTERO_ENABLED=false` to skip all Zotero operations
+**Example output (Zotero disabled):**
+```
+============================================================
+Batch Processing - Inbox Papers (using gemini)
+============================================================
+Zotero integration: DISABLED
 
-### Important Notes
+Found 3 PDF files to process.
 
-- **Close Zotero** before running batch processing to avoid database locks
-- Papers are added as "Journal Article" type by default
-- Collections are created to match your category hierarchy
+----------------------------------------
+Step 1: Auto-rename papers by extracted title
+----------------------------------------
+[1/3] 2308.03688.pdf... (needs title extraction)
+  Title: AgentBench: Evaluating LLMs as Agents
+  Renamed to: AgentBench-Evaluating-LLMs-as-Agents.pdf
+
+[2/3] ToolLLM-Facilitating-LLMs-to-Master-Tools.pdf...
+  OK Filename already matches title
+
+----------------------------------------
+Step 2: Categorizing papers
+----------------------------------------
+[1/3] AgentBench-Evaluating-LLMs-as-Agents.pdf...
+  -> 4.2 Agent Benchmarks (high)
+  Moved to: 4. AI Agents/4.2 Agent Benchmarks
+
+[2/3] ToolLLM-Facilitating-LLMs-to-Master-Tools.pdf...
+  -> 4.1 Agent Frameworks (high)
+  Moved to: 4. AI Agents/4.1 Agent Frameworks
+
+----------------------------------------
+Processed: 3 papers
+Successful: 3
+Renamed: 1, Kept original: 2
+```
+
+---
+
+## Installation
+
+```bash
+# 1. Clone or download the project
+cd ~/Documents/Papers/paper_categorizer
+
+# 2. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure API key
+cp .env.example .env
+# Edit .env and add your API key (at least one required):
+#   GEMINI_API_KEY=your-key
+#   ANTHROPIC_API_KEY=your-key
+#   OPENAI_API_KEY=your-key
+
+# 5. Configure Zotero (optional - OFF by default)
+#    The tool works standalone without Zotero.
+#    To enable Zotero integration, edit .env:
+#      ZOTERO_ENABLED=true
+#      ZOTERO_DB_PATH=~/Zotero/zotero.sqlite
+#      ZOTERO_STORAGE_PATH=~/Zotero/storage
+
+# 6. Initialize
+cd ~/Documents/Papers
+./paper_categorizer/run.sh --init
+```
+
+> **Note:** Zotero integration is **disabled by default**. You can use this tool to organize papers into folders without Zotero. Enable it only if you want to sync categories to your Zotero library.
 
 ---
 
 ## Configuration
 
-### .env File
+### API Keys (.env)
 
 ```bash
-# API Keys (at least one required)
+# At least one API key is required
 GEMINI_API_KEY=your-gemini-api-key
 ANTHROPIC_API_KEY=your-anthropic-api-key
 OPENAI_API_KEY=your-openai-api-key
 
-# Default AI provider
+# Default AI provider (optional)
 DEFAULT_PROVIDER=gemini
 
-# Zotero Integration (optional)
-ZOTERO_ENABLED=true
-ZOTERO_DB_PATH=~/Zotero/zotero.sqlite
-ZOTERO_STORAGE_PATH=~/Zotero/storage
+# Zotero Integration (OFF by default)
+ZOTERO_ENABLED=false    # Set to 'true' to enable Zotero sync
+# ZOTERO_DB_PATH=~/Zotero/zotero.sqlite
+# ZOTERO_STORAGE_PATH=~/Zotero/storage
 ```
 
-### Finding Your Zotero Paths
+### Categories (categories.json)
 
-| OS | Default Database Path | Default Storage Path |
-|----|----------------------|---------------------|
-| macOS | `~/Zotero/zotero.sqlite` | `~/Zotero/storage` |
-| Windows | `C:\Users\<username>\Zotero\zotero.sqlite` | `C:\Users\<username>\Zotero\storage` |
-| Linux | `~/Zotero/zotero.sqlite` | `~/Zotero/storage` |
-
-To find your actual paths: In Zotero, go to **Edit > Preferences > Advanced > Files and Folders**.
+```json
+{
+  "categories": {
+    "1": {
+      "name": "1. Deep Learning",
+      "description": "Neural networks and deep learning architectures",
+      "keywords": ["neural network", "transformer", "CNN"],
+      "subcategories": {
+        "1.1": "1.1 Architectures & Models",
+        "1.2": "1.2 Training & Optimization"
+      }
+    },
+    "2": {
+      "name": "2. Large Language Models",
+      "description": "LLMs, GPT, language model research",
+      "keywords": ["LLM", "GPT", "language model"],
+      "subcategories": {
+        "2.1": "2.1 Model Architecture",
+        "2.2": "2.2 Evaluation & Benchmarks"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -216,19 +267,15 @@ To find your actual paths: In Zotero, go to **Edit > Preferences > Advanced > Fi
 
 | Command | Description |
 |---------|-------------|
-| `--init` | Initialize system: scan existing folders or create template categories.json |
-| `--interactive`, `-i` | Enter paper titles interactively and get categories |
-| `--batch`, `-b` | Process all PDFs in Inbox folder |
-| `--dry-run` | Preview batch processing without moving files or modifying Zotero |
-| `--update-summary` | Regenerate Papers_Summary.md from existing folders |
+| `--init` | Initialize system and create Inbox folder |
+| `--interactive`, `-i` | Interactive mode - categorize papers one by one |
+| `--batch`, `-b` | Batch process all PDFs in Inbox |
+| `--dry-run` | Preview batch processing without moving files |
 | `--title`, `-t` | Categorize a single paper by title |
-| `--abstract`, `-a` | Provide abstract for better categorization |
+| `--list-categories`, `-l` | Show all categories |
+| `--list-providers` | Show available AI providers |
 | `--provider`, `-p` | Choose AI provider: `gemini`, `claude`, or `openai` |
-| `--list-providers` | Show available AI providers and their status |
-| `--list-categories`, `-l` | Show all available categories |
-| `--check-threshold` | Check if uncategorized papers exceed threshold |
-| `--suggest-categories` | Analyze uncategorized papers and suggest new categories |
-| `--zotero-status` | Check Zotero integration status and configuration |
+| `--zotero-status` | Check Zotero integration status |
 
 ---
 
@@ -238,280 +285,59 @@ To find your actual paths: In Zotero, go to **Edit > Preferences > Advanced > Fi
 Documents/Papers/
 ├── Inbox/                      # Drop new PDFs here
 ├── Papers Auto Category/       # Auto-organized papers
-│   ├── 1. Multi-Armed Bandits & Online Learning/
-│   │   ├── 1.1 Contextual Bandits/
-│   │   │   ├── 1.1.1 Linear Contextual Bandits/
-│   │   │   └── ...
-│   │   └── ...
-│   ├── 2. Recommender Systems/
-│   │   └── ...
+│   ├── 1. Deep Learning/
+│   │   ├── 1.1 Architectures & Models/
+│   │   └── 1.2 Training & Optimization/
+│   ├── 2. Large Language Models/
+│   ├── 3. AI Agents/
 │   └── ...
 ├── Papers_Summary.md           # Auto-generated summary
-└── paper_categorizer/          # Main package
-    ├── venv/                   # Python virtual environment
-    ├── run.sh                  # Wrapper script (recommended way to run)
-    ├── __init__.py             # Package marker
-    ├── __main__.py             # Entry point
-    ├── config.py               # Configuration management
-    ├── categories.py           # Category operations
-    ├── ai_providers.py         # AI provider implementations
-    ├── pdf_utils.py            # PDF text extraction
-    ├── zotero_db.py            # Zotero database operations
-    ├── file_manager.py         # File operations
-    ├── summarizer.py           # Summary generation
-    ├── cli.py                  # Command-line interface
-    ├── categories.json         # Customizable categories
-    ├── .env                    # Your configuration (git-ignored)
-    ├── .env.example            # Configuration template
-    ├── requirements.txt        # Python dependencies
-    └── README.md               # This file
+└── paper_categorizer/          # This tool
+    ├── run.sh                  # Main entry point
+    ├── categories.json         # Your categories
+    └── .env                    # Your API keys
 ```
 
 ---
 
-## Examples
+## Zotero Integration (Optional - OFF by Default)
 
-### Batch Processing with Zotero
+> **Zotero is disabled by default.** The tool works perfectly standalone - it organizes your PDFs into category folders without needing Zotero. Only enable Zotero if you want to sync your paper categories to your Zotero library.
+
+### To Enable Zotero
+
+Edit `.env` and set:
 
 ```bash
-# Process papers with Zotero integration (close Zotero first!)
-./paper_categorizer/run.sh --batch
-
-# Output:
-# ============================================================
-# Batch Processing - Inbox Papers (using gemini)
-# ============================================================
-# Zotero integration: ENABLED
-#   Database: /Users/username/Zotero/zotero.sqlite
-#   Storage: /Users/username/Zotero/storage
-#
-# Found 3 PDF files to process.
-#
-# Backing up Zotero database...
-#   Deleted old temp backup: zotero_temp_backup.sqlite
-#   Created Zotero backup: zotero_temp_backup.sqlite
-#
-# [1/3] Neural_Bandits_Paper.pdf...
-#   -> 1.1.2 Neural & Non-linear Contextual Bandits (high)
-#   Zotero: Found existing entry (ID: 1234)
-#   Zotero: Updated collection -> Neural & Non-linear Contextual Bandits
-#   Moved to: 1. Multi-Armed Bandits & Online Learning/1.1 Contextual Bandits/...
-#
-# [2/3] New_LLM_Paper.pdf...
-#   -> 3.1 LLM Evaluation & Benchmarking (high)
-#   Zotero: Not found, adding new entry...
-#   Zotero: Added with key ABC12345
-#   Moved to: 3. Large Language Models & NLP/3.1 LLM Evaluation...
-#
-# ----------------------------------------
-# Processed: 3 papers
-# Successful: 3
-# Failed: 0
-# Zotero updated: 1
-# Zotero added: 2
+ZOTERO_ENABLED=true
+ZOTERO_DB_PATH=~/Zotero/zotero.sqlite
+ZOTERO_STORAGE_PATH=~/Zotero/storage
 ```
 
-### Without Zotero Integration
+### Check Status
 
 ```bash
-# Disable Zotero in .env
-ZOTERO_ENABLED=false
-
-# Or just run - it will skip Zotero if not configured
-./paper_categorizer/run.sh --batch
-
-# Output shows:
-# Zotero integration: DISABLED
+./paper_categorizer/run.sh --zotero-status
 ```
 
----
+### Important Notes
 
-## Importing Existing Category Folders
-
-If you already have papers organized in category folders but no `categories.json`, the system can automatically generate one from your existing folder structure.
-
-### How It Works
-
-When you run `--init` without a `categories.json` file, the system will:
-
-1. **Detect existing folders** in `Papers Auto Category/`
-2. **Offer to scan them** and generate `categories.json` automatically
-3. **Preserve your folder names** on disk (no renaming)
-
-### Supported Folder Formats
-
-The system handles both numbered and unnumbered folder structures:
-
-**Numbered folders** (recommended):
-```
-Papers Auto Category/
-├── 1. Machine Learning/
-│   ├── 1.1 Supervised Learning/
-│   └── 1.2 Unsupervised Learning/
-└── 2. Natural Language Processing/
-```
-
-**Unnumbered folders** (also supported):
-```
-Papers Auto Category/
-├── Machine Learning/
-│   ├── Supervised Learning/
-│   └── Unsupervised Learning/
-└── Natural Language Processing/
-```
-
-### Auto-Numbering for Unnumbered Folders
-
-When scanning unnumbered folders, the system:
-- Assigns category codes internally (1, 2, 3...)
-- **Does NOT rename** folders on disk
-- Maps codes to original folder names in `categories.json`
-
-Example output when scanning unnumbered folders:
-```
-Scanning existing folders...
-
-Generated categories.json with 3 categories:
-  Machine Learning (2 subcategories)
-  Natural Language Processing (0 subcategories)
-  Uncategorized (0 subcategories)
-
-Note: The following folders were auto-numbered:
-  Code 1 -> 'Machine Learning'
-  Code 2 -> 'Natural Language Processing'
-
-Folder names on disk are NOT changed.
-Edit categories.json if you want different numbers.
-```
-
-### Resulting categories.json
-
-For unnumbered folders, the generated file looks like:
-```json
-{
-  "categories": {
-    "1": {
-      "name": "Machine Learning",
-      "description": "",
-      "keywords": [],
-      "subcategories": {
-        "1.1": "Supervised Learning",
-        "1.2": "Unsupervised Learning"
-      }
-    },
-    "2": {
-      "name": "Natural Language Processing",
-      "description": "",
-      "keywords": [],
-      "subcategories": {}
-    }
-  }
-}
-```
-
-After generation, you can edit the file to add descriptions and keywords for better AI categorization.
-
----
-
-## Dynamic Categories
-
-Categories are stored in `categories.json` and can be customized.
-
-### Add a New Category
-
-```json
-{
-  "categories": {
-    "17": {
-      "name": "17. Your New Category",
-      "description": "Description of what papers belong here",
-      "keywords": ["keyword1", "keyword2"],
-      "subcategories": {
-        "17.1": "17.1 Subcategory Name"
-      }
-    }
-  }
-}
-```
-
-### Adjust Uncategorized Threshold
-
-```json
-{
-  "uncategorized_threshold": 20
-}
-```
-
-When the threshold is exceeded, you'll get a warning suggesting to review categories.
-
----
-
-## Troubleshooting
-
-### "No PDF extraction available" / Papers go to Uncategorized
-- This happens when running with system Python instead of the virtual environment
-- **Solution**: Use `./paper_categorizer/run.sh` instead of `python -m paper_categorizer`
-- Or activate the venv first: `source paper_categorizer/venv/bin/activate`
-- PyPDF2 is installed in the venv but not in system Python
-
-### "No API key found"
-- Create `.env` file with at least one API key
-- Check the key is correctly formatted (no quotes needed)
-
-### "Zotero database not found"
-- Check `ZOTERO_DB_PATH` in `.env` points to the correct location
-- Run `--zotero-status` to verify configuration
-- Find your path: Zotero > Edit > Preferences > Advanced > Files and Folders
-
-### "Database is locked"
-- Close Zotero before running batch processing
-- Zotero locks its database while running
-
-### Papers not appearing in Zotero
-- Check that `ZOTERO_ENABLED=true` in `.env`
-- Restart Zotero to see newly added papers
-- Check the Zotero collections for your categories
-
-### Restore Zotero from Backup
-If something goes wrong, restore from the temp backup:
-```bash
-cp ~/Zotero/zotero_temp_backup.sqlite ~/Zotero/zotero.sqlite
-```
-
----
-
-## Files
-
-| File | Description |
-|------|-------------|
-| `run.sh` | Wrapper script that activates venv (recommended way to run) |
-| `__init__.py` | Package marker with version info |
-| `__main__.py` | Entry point for `python -m paper_categorizer` |
-| `config.py` | Configuration management (Singleton pattern) |
-| `categories.py` | Category hierarchy and operations |
-| `ai_providers.py` | AI provider implementations (Strategy pattern) |
-| `pdf_utils.py` | PDF text extraction utilities |
-| `zotero_db.py` | Zotero database operations (Repository pattern) |
-| `file_manager.py` | File and folder operations |
-| `summarizer.py` | Summary markdown generation |
-| `cli.py` | Command-line interface |
-| `categories.json` | Your category configuration (git-ignored) |
-| `categories.json.example` | Template for categories |
-| `.env` | Your API keys and Zotero paths (git-ignored) |
-| `.env.example` | Template for configuration |
-| `requirements.txt` | Python dependencies |
+- **Close Zotero** before batch processing to avoid database locks
+- Papers already in Zotero will have their collections updated
+- New papers will be added to Zotero with PDF attachments
 
 ---
 
 ## Tips
 
-1. **Close Zotero** before batch processing to avoid database locks
-2. **Rename files** before processing if filename doesn't match paper title
-3. **Use dry run** first: `--batch --dry-run` to preview changes
-4. **Check Zotero status** after setup: `--zotero-status`
-5. **Review uncategorized** periodically with `--check-threshold`
-6. **Get AI suggestions** when many papers are uncategorized: `--suggest-categories`
+1. **Auto-rename enabled** - Batch mode automatically extracts titles from PDFs and renames files (e.g., `2401.12345.pdf` → `Attention Is All You Need.pdf`)
+2. **Zotero is OFF by default** - The tool works standalone without Zotero. To enable Zotero sync, set `ZOTERO_ENABLED=true` in `.env` (see [Zotero Integration](#zotero-integration-optional))
+3. **Use dry run** - Preview changes before processing: `--batch --dry-run`
+4. **Customize categories** - Edit `categories.json` to match your research areas
+5. **Add keywords** - Help the AI categorize by adding relevant keywords to categories
 
 ---
 
-*Last updated: January 6, 2026 (v5.1 - Added run.sh wrapper script)*
+## License
+
+MIT License

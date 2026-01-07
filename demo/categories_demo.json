@@ -1,0 +1,83 @@
+{
+  "version": "2.0",
+  "last_updated": "",
+  "uncategorized_threshold": 20,
+  "categories": {
+    "1": {
+      "name": "1. Deep Learning",
+      "description": "Neural networks, transformers, and deep learning architectures",
+      "keywords": ["neural network", "deep learning", "transformer", "CNN", "RNN", "attention"],
+      "subcategories": {
+        "1.1": "1.1 Architectures & Models",
+        "1.2": "1.2 Training & Optimization",
+        "1.3": "1.3 Representation Learning"
+      }
+    },
+    "2": {
+      "name": "2. Traditional Machine Learning",
+      "description": "Classical ML algorithms and statistical methods",
+      "keywords": ["regression", "classification", "clustering", "SVM", "random forest", "boosting"],
+      "subcategories": {
+        "2.1": "2.1 Supervised Learning",
+        "2.2": "2.2 Unsupervised Learning",
+        "2.3": "2.3 Ensemble Methods"
+      }
+    },
+    "3": {
+      "name": "3. Large Language Models",
+      "description": "LLMs, GPT, language model research and applications",
+      "keywords": ["LLM", "GPT", "language model", "BERT", "prompt", "fine-tuning"],
+      "subcategories": {
+        "3.1": "3.1 Model Architecture",
+        "3.2": "3.2 Training & Alignment",
+        "3.3": "3.3 Evaluation & Benchmarks"
+      }
+    },
+    "4": {
+      "name": "4. AI Agents",
+      "description": "Autonomous agents, tool use, and agentic systems",
+      "keywords": ["agent", "tool use", "autonomous", "planning", "reasoning"],
+      "subcategories": {
+        "4.1": "4.1 Agent Frameworks",
+        "4.2": "4.2 Agent Benchmarks",
+        "4.3": "4.3 Multi-Agent Systems"
+      }
+    },
+    "5": {
+      "name": "5. Natural Language Processing",
+      "description": "Text processing, NLP tasks, and linguistic analysis",
+      "keywords": ["NLP", "text", "sentiment", "NER", "parsing"],
+      "subcategories": {
+        "5.1": "5.1 Text Classification",
+        "5.2": "5.2 Information Extraction",
+        "5.3": "5.3 Machine Translation"
+      }
+    },
+    "6": {
+      "name": "6. Computer Vision",
+      "description": "Image and video processing, visual recognition",
+      "keywords": ["vision", "image", "object detection", "segmentation"],
+      "subcategories": {
+        "6.1": "6.1 Image Classification",
+        "6.2": "6.2 Object Detection",
+        "6.3": "6.3 Image Generation"
+      }
+    },
+    "7": {
+      "name": "7. Reinforcement Learning",
+      "description": "RL algorithms, policy learning, and sequential decision making",
+      "keywords": ["reinforcement learning", "RL", "policy", "reward", "MDP"],
+      "subcategories": {
+        "7.1": "7.1 Model-Free RL",
+        "7.2": "7.2 Model-Based RL",
+        "7.3": "7.3 Multi-Agent RL"
+      }
+    },
+    "8": {
+      "name": "8. Uncategorized",
+      "description": "Papers that don't fit into existing categories",
+      "keywords": [],
+      "subcategories": {}
+    }
+  }
+}
