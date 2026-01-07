@@ -96,6 +96,8 @@ Examples:
                            help="List available AI providers")
         parser.add_argument("--zotero-status", action="store_true",
                            help="Check Zotero status")
+        parser.add_argument("--sync-zotero", action="store_true",
+                           help="Sync Zotero collection names to match categories.json")
         parser.add_argument("--check-threshold", action="store_true",
                            help="Check uncategorized threshold")
 
@@ -118,6 +120,9 @@ Examples:
             return
         elif args.zotero_status:
             self._cmd_zotero_status()
+            return
+        elif args.sync_zotero:
+            self._cmd_sync_zotero()
             return
 
         # Check if categories exist for other commands
@@ -364,6 +369,46 @@ Examples:
                 print(f"Error: {status['error']}")
         else:
             print("\nTo enable Zotero integration, set ZOTERO_ENABLED=true in .env")
+
+        print("="*50)
+
+    def _cmd_sync_zotero(self) -> None:
+        """Sync Zotero collection names to match categories.json."""
+        print("\n" + "="*50)
+        print("Sync Zotero Collection Names")
+        print("="*50)
+
+        if not zotero_db.is_enabled:
+            print("Zotero integration is disabled.")
+            print("Set ZOTERO_ENABLED=true in .env to enable.")
+            return
+
+        if not zotero_db.is_available():
+            print("Zotero database not accessible.")
+            return
+
+        # Load categories
+        try:
+            category_manager.load()
+        except CategoriesNotFoundError:
+            print("categories.json not found. Run --init first.")
+            return
+
+        # Backup first
+        print("Backing up Zotero database...")
+        if not zotero_db.backup():
+            print("Error: Could not backup Zotero. Aborting.")
+            return
+
+        # Sync names
+        print("Syncing collection names to match categories.json...")
+        renamed = zotero_db.sync_collection_names(category_manager)
+
+        if renamed > 0:
+            print(f"\nRenamed {renamed} collections to match categories.json")
+            print("Restart Zotero to see the changes.")
+        else:
+            print("\nAll collection names already match categories.json")
 
         print("="*50)
 
@@ -671,13 +716,18 @@ Text from first page:
         print("Step 2: Categorizing papers")
         print("-"*40)
 
-        # Backup Zotero
+        # Backup Zotero and sync collection names
         zotero_backup_ok = False
         if zotero_db.is_available() and not dry_run:
             print("Backing up Zotero database...")
             zotero_backup_ok = zotero_db.backup()
             if not zotero_backup_ok:
                 print("Warning: Could not backup Zotero. Zotero operations disabled.")
+            else:
+                # Sync collection names to match categories.json
+                renamed = zotero_db.sync_collection_names(category_manager)
+                if renamed > 0:
+                    print(f"  Synced {renamed} Zotero collection names to match categories.json")
 
         # Process papers
         results = []

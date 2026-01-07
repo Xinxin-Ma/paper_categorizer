@@ -19,6 +19,7 @@ AI-powered academic paper organization tool. Automatically categorize your resea
 | [1. Init](#1-initialize-the-system) | First-time setup, creates Inbox folder | ![Init](demo/demo_init.gif) |
 | [2. Interactive](#2-interactive-mode) | Enter title, get category instantly | ![Interactive](demo/demo_interactive.gif) |
 | [3. Batch](#3-batch-mode) | Process all PDFs in Inbox automatically | ![Batch](demo/demo_batch.gif) |
+| [4. Zotero](#zotero-integration-optional---off-by-default) | Optional Zotero sync (non-destructive) | ![Zotero](demo/demo_zotero.gif) |
 
 ---
 
@@ -276,6 +277,7 @@ ZOTERO_ENABLED=false    # Set to 'true' to enable Zotero sync
 | `--list-providers` | Show available AI providers |
 | `--provider`, `-p` | Choose AI provider: `gemini`, `claude`, or `openai` |
 | `--zotero-status` | Check Zotero integration status |
+| `--sync-zotero` | Sync Zotero collection names to match categories.json |
 
 ---
 
@@ -304,6 +306,17 @@ Documents/Papers/
 
 > **Zotero is disabled by default.** The tool works perfectly standalone - it organizes your PDFs into category folders without needing Zotero. Only enable Zotero if you want to sync your paper categories to your Zotero library.
 
+<details>
+<summary><strong>Click to see Zotero demo</strong></summary>
+
+![Zotero Demo](demo/demo_zotero.gif)
+
+**What you'll see:**
+- How to enable Zotero in `.env`
+- Running `--zotero-status` to verify connection
+
+</details>
+
 ### To Enable Zotero
 
 Edit `.env` and set:
@@ -320,11 +333,85 @@ ZOTERO_STORAGE_PATH=~/Zotero/storage
 ./paper_categorizer/run.sh --zotero-status
 ```
 
+Output:
+```
+==================================================
+Zotero Integration Status
+==================================================
+Enabled: Yes
+Database path: ~/Zotero/zotero.sqlite
+Database exists: Yes
+Storage path: ~/Zotero/storage
+Storage exists: Yes
+Papers in Zotero: 156
+Collections: 24
+==================================================
+```
+
+### Zotero Collection Structure
+
+The tool creates collections in Zotero under a root folder called **"Auto Paper Categories"**:
+
+```
+My Library
+└── Auto Paper Categories
+    ├── 1. Deep Learning
+    │   ├── 1.1 Architectures & Models
+    │   ├── 1.2 Training & Optimization
+    │   └── 1.3 Representation Learning
+    ├── 2. Traditional Machine Learning
+    │   ├── 2.1 Supervised Learning
+    │   ├── 2.2 Unsupervised Learning
+    │   └── 2.3 Ensemble Methods
+    ├── 3. Large Language Models
+    │   ├── 3.1 Model Architecture
+    │   ├── 3.2 Training & Alignment
+    │   └── 3.3 Evaluation & Benchmarks
+    ├── 4. AI Agents
+    │   ├── 4.1 Agent Frameworks
+    │   ├── 4.2 Agent Benchmarks
+    │   └── 4.3 Multi-Agent Systems
+    └── ...
+```
+
+- **Auto Paper Categories** is created automatically as the root collection
+- Main categories (1., 2., 3., ...) are nested under the root
+- Subcategories (1.1, 1.2, ...) are nested under their main category
+- Collection names match your `categories.json` configuration
+
+### Non-Destructive Behavior
+
+> **Your existing Zotero data is safe.** Zotero integration only ADDS to your library - it never deletes or modifies your existing folder structure.
+
+| What it DOES | What it does NOT do |
+|--------------|---------------------|
+| Adds new papers to Zotero with PDF attachments | Does NOT modify your existing folder structure |
+| Creates collections matching your categories | Does NOT delete or move files in Zotero storage |
+| Updates collection assignments for papers | Does NOT remove papers from existing collections |
+
+### Backup & Recovery
+
+Before any Zotero modifications, the tool automatically creates a backup:
+
+```
+~/Zotero/zotero_temp_backup.sqlite
+```
+
+**To restore from backup** (if something goes wrong):
+
+```bash
+# 1. Close Zotero completely
+# 2. Replace the database with the backup
+cp ~/Zotero/zotero_temp_backup.sqlite ~/Zotero/zotero.sqlite
+# 3. Restart Zotero
+```
+
 ### Important Notes
 
 - **Close Zotero** before batch processing to avoid database locks
-- Papers already in Zotero will have their collections updated
-- New papers will be added to Zotero with PDF attachments
+- Backup is created automatically before each batch run
+- Use `--dry-run` to preview Zotero changes without modifying
+- **Re-categorization**: If you edit `categories.json` (rename categories), run `--sync-zotero` first to update Zotero collection names
 
 ---
 

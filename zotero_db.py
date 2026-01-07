@@ -40,6 +40,10 @@ class ZoteroCollection:
     parent_id: Optional[int] = None
 
 
+# Root collection name for all auto-categorized papers
+ROOT_COLLECTION_NAME = "Auto Paper Categories"
+
+
 class ZoteroDatabase:
     """
     Manages Zotero SQLite database operations.
@@ -352,8 +356,9 @@ class ZoteroDatabase:
                     VALUES (?, ?, 1, 'application/pdf', ?, 0)
                 """, (attachment_id, item_id, f"storage:{pdf_path.name}"))
 
-                # Add to collection
-                collection_id = self._get_or_create_collection(conn, category_name)
+                # Add to collection (under Auto Paper Categories root)
+                root_key = self._get_or_create_root_collection(conn)
+                collection_id = self._get_or_create_collection(conn, category_name, root_key)
                 if collection_id:
                     cursor.execute(
                         "INSERT OR IGNORE INTO collectionItems (collectionID, itemID) VALUES (?, ?)",
@@ -376,10 +381,12 @@ class ZoteroDatabase:
         """
         Update the collection for an existing paper.
 
+        Structure: My Library > Auto Paper Categories > Main Category > Subcategory
+
         Args:
             item_id: Zotero item ID
-            category_name: Main category name
-            subcategory_name: Optional subcategory name
+            category_name: Main category name (e.g., "1. Deep Learning")
+            subcategory_name: Optional subcategory name (e.g., "1.1 Architectures")
 
         Returns:
             True if successful
@@ -391,8 +398,11 @@ class ZoteroDatabase:
             with self._connection() as conn:
                 cursor = conn.cursor()
 
-                # Get or create main collection
-                main_collection_id = self._get_or_create_collection(conn, category_name)
+                # Get or create root collection "Auto Paper Categories"
+                root_key = self._get_or_create_root_collection(conn)
+
+                # Get or create main collection under root
+                main_collection_id = self._get_or_create_collection(conn, category_name, root_key)
 
                 # Handle subcategory
                 if subcategory_name and subcategory_name != category_name:
@@ -468,6 +478,32 @@ class ZoteroDatabase:
 
         return cursor.lastrowid
 
+    def _get_or_create_root_collection(self, conn) -> Optional[str]:
+        """Get or create the root 'Auto Paper Categories' collection and return its key."""
+        cursor = conn.cursor()
+
+        # Check if root collection exists
+        cursor.execute("""
+            SELECT key FROM collections
+            WHERE collectionName = ? AND parentCollectionID IS NULL
+        """, (ROOT_COLLECTION_NAME,))
+
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+
+        # Create root collection
+        new_key = self._generate_key()
+        library_id = self._get_library_id(cursor)
+
+        cursor.execute("""
+            INSERT INTO collections (collectionName, parentCollectionID, libraryID,
+                                     key, version, synced)
+            VALUES (?, NULL, ?, ?, 0, 0)
+        """, (ROOT_COLLECTION_NAME, library_id, new_key))
+
+        return new_key
+
     def get_collections(self) -> List[ZoteroCollection]:
         """Get all collections."""
         if not self.is_available():
@@ -492,6 +528,75 @@ class ZoteroDatabase:
                 ]
         except Exception:
             return []
+
+    def sync_collection_names(self, category_manager) -> int:
+        """
+        Sync Zotero collection names to match categories.json.
+
+        Recursively updates all collection names under 'Auto Paper Categories'
+        to match the names defined in categories.json.
+
+        Args:
+            category_manager: CategoryManager instance with loaded categories
+
+        Returns:
+            Number of collections renamed
+        """
+        if not self.is_available():
+            return 0
+
+        # Build mapping: code prefix -> full name from categories
+        name_mapping = {}
+        for code, cat_info in category_manager.hierarchy.items():
+            name_mapping[code] = cat_info['name']
+            for subcode, subname in cat_info.get('subcategories', {}).items():
+                # Handle nested paths like '1.1 Contextual/1.1.1 Linear'
+                final_name = subname.split('/')[-1] if '/' in subname else subname
+                name_mapping[subcode] = final_name
+
+        renamed_count = 0
+
+        try:
+            with self._connection() as conn:
+                cursor = conn.cursor()
+
+                # Get all collections under Auto Paper Categories (recursively)
+                cursor.execute("""
+                    WITH RECURSIVE subcollections AS (
+                        SELECT collectionID, collectionName, parentCollectionID
+                        FROM collections
+                        WHERE collectionName = ?
+                        UNION ALL
+                        SELECT c.collectionID, c.collectionName, c.parentCollectionID
+                        FROM collections c
+                        JOIN subcollections s ON c.parentCollectionID = s.collectionID
+                    )
+                    SELECT collectionID, collectionName FROM subcollections
+                    WHERE collectionName != ?
+                """, (ROOT_COLLECTION_NAME, ROOT_COLLECTION_NAME))
+
+                collections = cursor.fetchall()
+
+                for coll_id, coll_name in collections:
+                    # Extract code prefix (e.g., "1.1.2" from "1.1.2 Name")
+                    parts = coll_name.split(' ', 1)
+                    if parts:
+                        code = parts[0]
+                        if code in name_mapping:
+                            expected_name = name_mapping[code]
+                            if coll_name != expected_name:
+                                cursor.execute(
+                                    "UPDATE collections SET collectionName = ? WHERE collectionID = ?",
+                                    (expected_name, coll_id)
+                                )
+                                renamed_count += 1
+
+                conn.commit()
+
+        except Exception as e:
+            print(f"Error syncing collection names: {e}")
+
+        return renamed_count
 
     # =========================================================================
     # Utilities
