@@ -194,16 +194,14 @@ class FileManager:
         for _, code, cat_dict, _ in categories_list:
             categories[code] = cat_dict
 
-        # Add Uncategorized at the end if not present
+        # Add Uncategorized as category 0 if not present
         has_uncategorized = any(
             "uncategorized" in info.get("name", "").lower()
             for info in categories.values()
         )
         if not has_uncategorized:
-            max_num = max(int(c) for c in categories.keys()) if categories else 0
-            uncat_num = max_num + 1
-            categories[str(uncat_num)] = {
-                "name": f"{uncat_num}. Uncategorized",
+            categories["0"] = {
+                "name": "0. Uncategorized",
                 "description": "Papers that don't fit into existing categories",
                 "keywords": [],
                 "subcategories": {}

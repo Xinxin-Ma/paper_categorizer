@@ -273,6 +273,12 @@ Examples:
             "last_updated": "",
             "uncategorized_threshold": 20,
             "categories": {
+                "0": {
+                    "name": "0. Uncategorized",
+                    "description": "Papers that don't fit into existing categories",
+                    "keywords": [],
+                    "subcategories": {}
+                },
                 "1": {
                     "name": "1. Example Category",
                     "description": "Description of this category",
@@ -285,12 +291,6 @@ Examples:
                     "name": "2. Another Category",
                     "description": "Another category description",
                     "keywords": ["keyword3"],
-                    "subcategories": {}
-                },
-                "3": {
-                    "name": "3. Uncategorized",
-                    "description": "Papers that don't fit into existing categories",
-                    "keywords": [],
                     "subcategories": {}
                 }
             }
@@ -457,7 +457,7 @@ Examples:
             try:
                 result = provider.categorize(title, abstract if abstract else None)
 
-                cat_code = result.get('category_code', '16')
+                cat_code = result.get('category_code', '0')
                 cat_name = result.get('category_name', 'Uncategorized')
                 folder_path = category_manager.get_folder_path(cat_code)
 
@@ -746,7 +746,7 @@ Text from first page:
                 # Categorize
                 result = provider.categorize(paper.title, abstract)
 
-                cat_code = result.get('category_code', '16')
+                cat_code = result.get('category_code', '0')
                 cat_name = result.get('category_name', 'Uncategorized')
                 confidence = result.get('confidence', 'low')
                 reasoning = result.get('reasoning', '')
@@ -855,7 +855,7 @@ Text from first page:
 
         result = provider.categorize(title, abstract)
 
-        cat_code = result.get('category_code', '16')
+        cat_code = result.get('category_code', '0')
         cat_name = result.get('category_name', 'Uncategorized')
         folder_path = category_manager.get_folder_path(cat_code)
 

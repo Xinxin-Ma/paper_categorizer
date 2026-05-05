@@ -137,13 +137,55 @@ CRITICAL: Use the EXACT category codes shown in the hierarchy (e.g., "5.3", "13.
             return json.loads(response_text.strip())
         except json.JSONDecodeError:
             return {
-                "category_code": "16",
+                "category_code": "0",
                 "category_name": "Uncategorized",
                 "confidence": "low",
                 "reasoning": "Failed to parse API response",
                 "alternative_categories": [],
                 "raw_response": response_text[:500]
             }
+
+
+class DigitalOceanProvider(AIProvider):
+    """DigitalOcean GenAI API provider (OpenAI-compatible)."""
+
+    def __init__(self, api_key: str):
+        super().__init__("digitalocean")
+        self.api_key = api_key
+        self.model_name = config.ai.digitalocean_model
+
+        try:
+            from openai import OpenAI
+            self.client = OpenAI(api_key=api_key, base_url="https://inference.do-ai.run/v1/")
+        except ImportError:
+            raise ImportError("openai package not installed")
+
+    def categorize(self, title: str, abstract: Optional[str] = None) -> Dict:
+        user_prompt = self._build_user_prompt(title, abstract)
+
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": self._get_system_prompt()},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=1024
+        )
+
+        response_text = response.choices[0].message.content
+        return self._parse_response(response_text)
+
+    def query(self, prompt: str) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=512
+        )
+        return response.choices[0].message.content
 
 
 class GeminiProvider(AIProvider):
@@ -299,7 +341,9 @@ class ProviderFactory:
         # If specific provider requested
         if provider_name:
             provider_name = provider_name.lower()
-            if provider_name == "gemini" and config.ai.gemini_key:
+            if provider_name == "digitalocean" and config.ai.digitalocean_key:
+                return DigitalOceanProvider(config.ai.digitalocean_key)
+            elif provider_name == "gemini" and config.ai.gemini_key:
                 return GeminiProvider(config.ai.gemini_key)
             elif provider_name == "claude" and config.ai.anthropic_key:
                 return ClaudeProvider(config.ai.anthropic_key)
@@ -312,7 +356,9 @@ class ProviderFactory:
         # Use default provider if set
         if config.ai.default_provider:
             default = config.ai.default_provider
-            if default == "gemini" and config.ai.gemini_key:
+            if default == "digitalocean" and config.ai.digitalocean_key:
+                return DigitalOceanProvider(config.ai.digitalocean_key)
+            elif default == "gemini" and config.ai.gemini_key:
                 return GeminiProvider(config.ai.gemini_key)
             elif default == "claude" and config.ai.anthropic_key:
                 return ClaudeProvider(config.ai.anthropic_key)
@@ -320,7 +366,9 @@ class ProviderFactory:
                 return OpenAIProvider(config.ai.openai_key)
 
         # Fall back to first available
-        if config.ai.gemini_key:
+        if config.ai.digitalocean_key:
+            return DigitalOceanProvider(config.ai.digitalocean_key)
+        elif config.ai.gemini_key:
             return GeminiProvider(config.ai.gemini_key)
         elif config.ai.anthropic_key:
             return ClaudeProvider(config.ai.anthropic_key)
@@ -329,6 +377,7 @@ class ProviderFactory:
 
         print("Error: No API key found.")
         print("Please set one of the following environment variables or create a .env file:")
+        print("  - DIGITALOCEAN_API_KEY")
         print("  - GEMINI_API_KEY")
         print("  - ANTHROPIC_API_KEY")
         print("  - OPENAI_API_KEY")
@@ -344,6 +393,7 @@ class ProviderFactory:
             Dict mapping provider name to availability status
         """
         return {
+            "digitalocean": bool(config.ai.digitalocean_key),
             "gemini": bool(config.ai.gemini_key),
             "claude": bool(config.ai.anthropic_key),
             "openai": bool(config.ai.openai_key),

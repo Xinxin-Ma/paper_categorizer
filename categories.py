@@ -211,16 +211,14 @@ class CategoryManager:
         Get the code for the Uncategorized category.
 
         Searches for a category with 'Uncategorized' in its name.
-        Falls back to the highest numbered category if not found.
+        Falls back to "0" (Uncategorized is always category 0).
         """
         for code, info in self.hierarchy.items():
             if "uncategorized" in info.get("name", "").lower():
                 return code
 
-        # Fallback: return highest number
-        if self.hierarchy:
-            return max(self.hierarchy.keys(), key=lambda x: int(x))
-        return "1"
+        # Fallback: Uncategorized is always 0
+        return "0"
 
     def get_uncategorized_folder(self) -> Path:
         """Get the folder path for uncategorized papers."""

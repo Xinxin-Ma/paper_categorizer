@@ -3,6 +3,12 @@
   "last_updated": "",
   "uncategorized_threshold": 20,
   "categories": {
+    "0": {
+      "name": "0. Uncategorized",
+      "description": "Papers that don't fit into existing categories",
+      "keywords": [],
+      "subcategories": {}
+    },
     "1": {
       "name": "1. Deep Learning",
       "description": "Neural networks, transformers, and deep learning architectures",
@@ -74,9 +80,9 @@
       }
     },
     "8": {
-      "name": "8. Uncategorized",
-      "description": "Papers that don't fit into existing categories",
-      "keywords": [],
+      "name": "8. Robotics & Embodied AI",
+      "description": "Robotics, embodied agents, and physical AI systems",
+      "keywords": ["robotics", "embodied", "manipulation", "navigation"],
       "subcategories": {}
     }
   }

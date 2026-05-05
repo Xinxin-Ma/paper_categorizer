@@ -3,6 +3,12 @@
   "last_updated": "",
   "uncategorized_threshold": 20,
   "categories": {
+    "0": {
+      "name": "0. Uncategorized",
+      "description": "Papers that don't fit into existing categories",
+      "keywords": [],
+      "subcategories": {}
+    },
     "1": {
       "name": "1. Machine Learning",
       "description": "General machine learning and deep learning research",
@@ -30,9 +36,9 @@
       "subcategories": {}
     },
     "4": {
-      "name": "4. Uncategorized",
-      "description": "Papers that don't fit into existing categories",
-      "keywords": [],
+      "name": "4. Computer Science Theory",
+      "description": "Theoretical CS research",
+      "keywords": ["complexity", "algorithms", "theory"],
       "subcategories": {}
     }
   }

@@ -57,12 +57,14 @@ class ZoteroConfig:
 @dataclass
 class AIConfig:
     """AI provider configuration."""
+    digitalocean_key: Optional[str] = field(default_factory=lambda: os.environ.get("DIGITALOCEAN_API_KEY"))
     gemini_key: Optional[str] = field(default_factory=lambda: os.environ.get("GEMINI_API_KEY"))
     anthropic_key: Optional[str] = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY"))
     openai_key: Optional[str] = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY"))
     default_provider: Optional[str] = field(default_factory=lambda: os.environ.get("DEFAULT_PROVIDER", "").lower() or None)
 
     # Model names
+    digitalocean_model: str = "anthropic-claude-4.5-sonnet"
     gemini_model: str = "gemini-2.0-flash"
     claude_model: str = "claude-3-5-sonnet-20241022"
     openai_model: str = "gpt-4o-mini"
@@ -116,11 +118,13 @@ class Config:
     @property
     def has_any_ai_key(self) -> bool:
         """Check if any AI API key is configured."""
-        return bool(self.ai.gemini_key or self.ai.anthropic_key or self.ai.openai_key)
+        return bool(self.ai.digitalocean_key or self.ai.gemini_key or self.ai.anthropic_key or self.ai.openai_key)
 
     def get_available_providers(self) -> list:
         """Get list of available AI providers."""
         providers = []
+        if self.ai.digitalocean_key:
+            providers.append("digitalocean")
         if self.ai.gemini_key:
             providers.append("gemini")
         if self.ai.anthropic_key:
